@@ -475,6 +475,37 @@ function closeAttentionModal() {
   document.getElementById('attention-overlay').classList.remove('active');
 }
 
+/* ── Import / Export ──────────────────────────────────────── */
+function exportData() {
+  const json = JSON.stringify(clients, null, 2);
+  const blob = new Blob([json], { type: 'application/json' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = `ai-coverage-${new Date().toISOString().slice(0, 10)}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function importData(file) {
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      const parsed = JSON.parse(e.target.result);
+      if (!Array.isArray(parsed)) throw new Error('Expected a JSON array');
+      if (!confirm(`Import ${parsed.length} client(s)? This will replace all current data.`)) return;
+      clients = parsed.map(normaliseClient);
+      saveData();
+      renderTable();
+      renderSummary();
+    } catch (err) {
+      alert(`Import failed: ${err.message}`);
+    }
+  };
+  reader.readAsText(file);
+}
+
 /* ── Modal ─────────────────────────────────────────────────── */
 function openModal() {
   const overlay = document.getElementById('modal-overlay');
@@ -528,6 +559,15 @@ document.addEventListener('DOMContentLoaded', () => {
   /* Toolbar */
   document.getElementById('add-client-btn').addEventListener('click', openModal);
   document.getElementById('search-input').addEventListener('input', renderTable);
+  document.getElementById('export-btn').addEventListener('click', exportData);
+  document.getElementById('import-btn').addEventListener('click', () => {
+    const input = document.getElementById('import-file-input');
+    input.value = '';
+    input.click();
+  });
+  document.getElementById('import-file-input').addEventListener('change', (e) => {
+    importData(e.target.files[0]);
+  });
 
   /* Anonymize toggle */
   document.getElementById('anon-toggle').addEventListener('click', () => {

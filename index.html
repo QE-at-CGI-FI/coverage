@@ -33,6 +33,9 @@
           <button class="btn-anon" id="anon-toggle" aria-pressed="false" title="Hide real client names">
             <span class="anon-icon">👁</span> Anonymize
           </button>
+          <button class="btn-secondary" id="export-btn" title="Export data as JSON">⬇ Export</button>
+          <button class="btn-secondary" id="import-btn" title="Import data from JSON">⬆ Import</button>
+          <input type="file" id="import-file-input" accept=".json,application/json" style="display:none" aria-hidden="true" />
         </div>
         <div class="search-box">
           <input type="text" id="search-input" placeholder="Search clients…" aria-label="Search clients" />
