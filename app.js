@@ -17,6 +17,12 @@ const AI_APPLIED_SUBS = [
   { key: 'darkFactory', label: 'Dark Factory' },
 ];
 
+const AI_BENEFITS_SUBS = [
+  { key: 'task',       label: 'Task' },
+  { key: 'individual', label: 'Individual' },
+  { key: 'project',    label: 'Project' },
+];
+
 const STEP_LABELS = ['Not started', 'Permissions', 'Applied', 'Benefits'];
 
 const LIMITATIONS = [
@@ -79,7 +85,11 @@ function normaliseClient(c) {
       agentic:     Boolean(c.aiApplied?.agentic),
       darkFactory: Boolean(c.aiApplied?.darkFactory),
     },
-    aiBenefits:  Boolean(c.aiBenefits),
+    aiBenefits: {
+      task:       Boolean(c.aiBenefits?.task ?? (typeof c.aiBenefits === 'boolean' && c.aiBenefits)),
+      individual: Boolean(c.aiBenefits?.individual),
+      project:    Boolean(c.aiBenefits?.project),
+    },
     limitations: {
       mcpControl:           Boolean(c.limitations?.mcpControl),
       confidentialTestData: Boolean(c.limitations?.confidentialTestData),
@@ -110,8 +120,12 @@ function isAiApplied(client) {
   return AI_APPLIED_SUBS.some(s => client.aiApplied[s.key]);
 }
 
+function hasBenefits(client) {
+  return AI_BENEFITS_SUBS.some(s => client.aiBenefits[s.key]);
+}
+
 function progressLevel(client) {
-  if (client.aiBenefits)   return 3;
+  if (hasBenefits(client)) return 3;
   if (isAiApplied(client)) return 2;
   if (permCount(client) > 0) return 1;
   return 0;
@@ -130,7 +144,7 @@ function buildProgressSteps(client) {
   const cnt  = permCount(client);
   const pSt  = cnt === 0 ? 'inactive' : cnt < 4 ? 'partial' : 'complete';
   const aSt  = isAiApplied(client) ? 'complete' : 'inactive';
-  const bSt  = client.aiBenefits ? 'complete' : 'inactive';
+  const bSt  = hasBenefits(client) ? 'complete' : 'inactive';
   const l1   = pSt === 'complete' && aSt === 'complete';
   const l2   = aSt === 'complete' && bSt === 'complete';
 
@@ -199,13 +213,14 @@ function buildRow(client, index) {
       </td>
       ${perms}
       ${appliedCells}
+      ${AI_BENEFITS_SUBS.map(s => `
       <td class="check-cell">
         <input type="checkbox"
                data-id="${escapeHtml(client.id)}"
-               data-field="aiBenefits"
-               aria-label="AI Benefits"
-               ${client.aiBenefits ? 'checked' : ''} />
-      </td>
+               data-field="aiBenefits.${s.key}"
+               aria-label="AI Benefits: ${s.label}"
+               ${client.aiBenefits[s.key] ? 'checked' : ''} />
+      </td>`).join('')}
       <td>${buildProgressSteps(client)}</td>
       <td class="check-cell">
         <button class="btn-delete"
@@ -232,7 +247,7 @@ function renderTable() {
       : 'No clients match your search.';
     tbody.innerHTML = `
       <tr>
-        <td colspan="11" class="empty-state">
+        <td colspan="14" class="empty-state">
           <div class="empty-icon">📋</div>
           <div>${msg}</div>
         </td>
@@ -248,7 +263,7 @@ function updateStats() {
   const total    = clients.length;
   const withPerm = clients.filter(c => permCount(c) > 0).length;
   const applied  = clients.filter(c => isAiApplied(c)).length;
-  const benefits = clients.filter(c => c.aiBenefits).length;
+  const benefits = clients.filter(c => hasBenefits(c)).length;
   const pct      = n => total ? `${Math.round(n / total * 100)}%` : '0%';
 
   document.getElementById('stat-total').textContent       = total;
@@ -264,16 +279,17 @@ function renderSummary() {
     return;
   }
 
-  const TOTAL_STEPS = 8; // 4 perms + 3 applied + 1 benefits
+  const TOTAL_STEPS = 11; // 5 perms + 3 applied + 3 benefits
   const sorted = [...clients].sort((a, b) => a.name.localeCompare(b.name));
   container.innerHTML = sorted.map((client, i) => {
-    const cnt          = permCount(client);
-    const appliedCount = AI_APPLIED_SUBS.filter(s => client.aiApplied[s.key]).length;
-    const steps = cnt + appliedCount + (client.aiBenefits ? 1 : 0);
+    const cnt           = permCount(client);
+    const appliedCount  = AI_APPLIED_SUBS.filter(s => client.aiApplied[s.key]).length;
+    const benefitsCount = AI_BENEFITS_SUBS.filter(s => client.aiBenefits[s.key]).length;
+    const steps = cnt + appliedCount + benefitsCount;
     const pct   = Math.round(steps / TOTAL_STEPS * 100);
-    const pw    = (cnt          / TOTAL_STEPS * 100).toFixed(1);
-    const aw    = (appliedCount / TOTAL_STEPS * 100).toFixed(1);
-    const bw    = (client.aiBenefits ? 1/TOTAL_STEPS*100 : 0).toFixed(1);
+    const pw    = (cnt           / TOTAL_STEPS * 100).toFixed(1);
+    const aw    = (appliedCount  / TOTAL_STEPS * 100).toFixed(1);
+    const bw    = (benefitsCount / TOTAL_STEPS * 100).toFixed(1);
     const name  = displayName(client, i);
     const cls   = client.classification;
 
@@ -286,7 +302,7 @@ function renderSummary() {
         <div class="summary-bar-wrap">
           <div class="summary-segment" style="width:${pw}%;background:var(--cgi-red)"   title="${cnt} permission(s)"></div>
           <div class="summary-segment" style="width:${aw}%;background:var(--amber)"     title="AI Applied (${appliedCount}/3)"></div>
-          <div class="summary-segment" style="width:${bw}%;background:var(--green)"     title="AI Benefits"></div>
+          <div class="summary-segment" style="width:${bw}%;background:var(--green)"     title="AI Benefits (${benefitsCount}/3)"></div>
         </div>
         <div class="summary-pct">${pct}%</div>
       </div>`;
@@ -309,6 +325,9 @@ function onTableChange(e) {
   } else if (field.startsWith('aiApplied.')) {
     const key = field.slice('aiApplied.'.length);
     client.aiApplied[key] = el.checked;
+  } else if (field.startsWith('aiBenefits.')) {
+    const key = field.slice('aiBenefits.'.length);
+    client.aiBenefits[key] = el.checked;
   } else {
     client[field] = el.checked;
   }

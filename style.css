@@ -208,6 +208,9 @@ thead th.col-group-header {
 thead th.col-group-header.col-group-applied {
   background: var(--cgi-purple);
 }
+thead th.col-group-header.col-group-benefits {
+  background: var(--cgi-red);
+}
 thead th.sub-header {
   background: var(--cgi-navy-mid);
   font-weight: 600;
