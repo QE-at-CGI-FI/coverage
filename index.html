@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI Adoption Coverage Tracker</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <header>
+    <div class="header-content">
+      <span class="logo">
+        <img src="image.png" alt="CGI" height="36" />
+      </span>
+      <h1>AI Native Development Coverage Tracker</h1>
+    </div>
+  </header>
+
+  <nav class="tab-nav">
+    <button class="tab-btn active" data-tab="coverage">Coverage Tracking</button>
+    <button class="tab-btn" data-tab="summary">Summary</button>
+  </nav>
+
+  <main>
+
+    <!-- ── Coverage Tracking Tab ── -->
+    <div class="tab-content active" id="tab-coverage">
+
+      <div class="toolbar">
+        <div class="toolbar-left">
+          <button class="btn-primary" id="add-client-btn">+ Add Client</button>
+          <button class="btn-anon" id="anon-toggle" aria-pressed="false" title="Hide real client names">
+            <span class="anon-icon">👁</span> Anonymize
+          </button>
+        </div>
+        <div class="search-box">
+          <input type="text" id="search-input" placeholder="Search clients…" aria-label="Search clients" />
+        </div>
+      </div>
+
+      <div class="stats-cards">
+        <div class="stat-card stat-total">
+          <div class="stat-value" id="stat-total">0</div>
+          <div class="stat-label">Total Clients</div>
+        </div>
+        <div class="stat-card stat-perm">
+          <div class="stat-value" id="stat-permissions">0%</div>
+          <div class="stat-label">With Permissions</div>
+        </div>
+        <div class="stat-card stat-applied">
+          <div class="stat-value" id="stat-applied">0%</div>
+          <div class="stat-label">AI Applied</div>
+        </div>
+        <div class="stat-card stat-benefits">
+          <div class="stat-value" id="stat-benefits">0%</div>
+          <div class="stat-label">AI Benefits</div>
+        </div>
+      </div>
+
+      <div class="table-container">
+        <table id="coverage-table" aria-label="Client AI adoption coverage">
+          <thead>
+            <tr>
+              <th rowspan="2" class="col-client">Client <span class="col-hint">(color = classification)</span></th>
+              <th colspan="5" class="col-group-header">AI Permissions</th>
+              <th colspan="3" class="col-group-header col-group-applied">AI Applied</th>
+              <th rowspan="2" class="col-step">AI Benefits</th>
+              <th rowspan="2" class="col-progress">Progress</th>
+              <th rowspan="2" class="col-actions"></th>
+            </tr>
+            <tr>
+              <th class="col-perm sub-header" title="Can use work-related questions">Work Questions</th>
+              <th class="col-perm sub-header" title="Can use for specs">Specs</th>
+              <th class="col-perm sub-header" title="Can use for code">Code</th>
+              <th class="col-perm sub-header" title="Can use for agentic access">Agentic</th>
+              <th class="col-perm sub-header" title="Can use with secrets">Secrets</th>
+              <th class="col-perm sub-header" title="Generative AI applied">Generative</th>
+              <th class="col-perm sub-header" title="Agentic AI applied">Agentic</th>
+              <th class="col-perm sub-header" title="Dark factory AI applied">Dark Factory</th>
+            </tr>
+          </thead>
+          <tbody id="coverage-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ── Summary Tab ── -->
+    <div class="tab-content" id="tab-summary">
+      <div class="summary-card">
+        <h2>Adoption Progress Overview</h2>
+        <div class="legend">
+          <span class="legend-dot" style="background:var(--cgi-red)"></span> Permissions
+          <span class="legend-dot" style="background:var(--amber)"></span> Applied
+          <span class="legend-dot" style="background:var(--green)"></span> Benefits
+        </div>
+        <div id="summary-chart"></div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- ── Attention Modal ── -->
+  <div class="modal-overlay" id="attention-overlay" role="dialog" aria-modal="true" aria-labelledby="attention-title">
+    <div class="modal">
+      <h2 id="attention-title">Attention</h2>
+      <p class="attention-subtitle">Items that need action</p>
+      <div id="attention-list"></div>
+      <div class="modal-actions">
+        <button class="btn-secondary" id="attention-close">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Limitations Modal ── -->
+  <div class="modal-overlay" id="limitations-overlay" role="dialog" aria-modal="true" aria-labelledby="limitations-title">
+    <div class="modal">
+      <h2 id="limitations-title">Limitations</h2>
+      <div id="limitations-list"></div>
+      <div class="modal-actions">
+        <button class="btn-secondary" id="limitations-close">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Add Client Modal ── -->
+  <div class="modal-overlay" id="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+    <div class="modal">
+      <h2 id="modal-title">Add New Client</h2>
+      <label for="new-client-name" class="sr-only">Client name</label>
+      <input type="text" id="new-client-name" placeholder="Client name" autocomplete="off" />
+      <div class="modal-actions">
+        <button class="btn-secondary" id="modal-cancel">Cancel</button>
+        <button class="btn-primary" id="modal-confirm">Add Client</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
