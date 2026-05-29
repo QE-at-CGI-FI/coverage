@@ -25,11 +25,27 @@ const AI_BENEFITS_SUBS = [
 
 const STEP_LABELS = ['Not started', 'Permissions', 'Applied', 'Benefits'];
 
-const LIMITATIONS = [
-  { key: 'mcpControl',           label: 'MCP control' },
-  { key: 'confidentialTestData', label: 'Confidential Test Data' },
-  { key: 'noInternetAccess',     label: 'No internet access' },
+const LIMITATION_GROUPS = [
+  {
+    subtitle: 'Tools',
+    items: [
+      { key: 'githubCopilot',  label: 'Github Copilot' },
+      { key: 'amazonQ',        label: 'Amazon Q' },
+      { key: 'codex',          label: 'Codex' },
+      { key: 'claudeCode',     label: 'Claude Code' },
+      { key: 'atlassianRovo',  label: 'Atlassian Rovo' },
+    ]
+  },
+  {
+    subtitle: 'Settings',
+    items: [
+      { key: 'mcpControl',           label: 'MCP control' },
+      { key: 'confidentialTestData', label: 'Confidential Test Data' },
+      { key: 'noInternetAccess',     label: 'No internet access' },
+    ]
+  }
 ];
+const LIMITATIONS = LIMITATION_GROUPS.flatMap(g => g.items);
 
 const ATTENTION_ITEMS = [
   { key: 'useWithoutPermissions', label: 'Use without permissions' },
@@ -91,6 +107,11 @@ function normaliseClient(c) {
       project:    Boolean(c.aiBenefits?.project),
     },
     limitations: {
+      githubCopilot:        Boolean(c.limitations?.githubCopilot),
+      amazonQ:              Boolean(c.limitations?.amazonQ),
+      codex:                Boolean(c.limitations?.codex),
+      claudeCode:           Boolean(c.limitations?.claudeCode),
+      atlassianRovo:        Boolean(c.limitations?.atlassianRovo),
       mcpControl:           Boolean(c.limitations?.mcpControl),
       confidentialTestData: Boolean(c.limitations?.confidentialTestData),
       noInternetAccess:     Boolean(c.limitations?.noInternetAccess),
@@ -418,14 +439,18 @@ function openLimitationsModal(clientId) {
     `Limitations: ${anonymised ? 'Client' : client.name}`;
 
   const list = document.getElementById('limitations-list');
-  list.innerHTML = LIMITATIONS.map(l => `
-    <label class="limitations-item">
-      <input type="checkbox"
-             data-lim-id="${escapeHtml(client.id)}"
-             data-limitation="${l.key}"
-             ${client.limitations[l.key] ? 'checked' : ''} />
-      ${escapeHtml(l.label)}
-    </label>`).join('');
+  list.innerHTML = LIMITATION_GROUPS.map(group => `
+    <div class="limitations-group">
+      <div class="limitations-subtitle">${escapeHtml(group.subtitle)}</div>
+      ${group.items.map(l => `
+        <label class="limitations-item">
+          <input type="checkbox"
+                 data-lim-id="${escapeHtml(client.id)}"
+                 data-limitation="${l.key}"
+                 ${client.limitations[l.key] ? 'checked' : ''} />
+          ${escapeHtml(l.label)}
+        </label>`).join('')}
+    </div>`).join('');
 
   list.querySelectorAll('input[type="checkbox"]').forEach(cb => {
     cb.addEventListener('change', () => {

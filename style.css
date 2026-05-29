@@ -435,6 +435,15 @@ tbody td { padding: .65rem 1rem; font-size: .88rem; vertical-align: middle; }
 }
 
 /* ── Limitations modal list ────────────────────────────────── */
+.limitations-subtitle {
+  font-weight: 600;
+  font-size: .8rem;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: var(--cgi-muted);
+  padding: .75rem 0 .2rem;
+}
+.limitations-group:first-child .limitations-subtitle { padding-top: .1rem; }
 .limitations-item {
   display: flex;
   align-items: center;
