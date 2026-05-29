@@ -417,8 +417,8 @@ tbody td { padding: .65rem 1rem; font-size: .88rem; vertical-align: middle; }
   transition: color .15s;
   flex-shrink: 0;
 }
-.btn-tools:hover { color: #E91E8C; }
-.btn-tools.has-tools { color: #E91E8C; }
+.btn-tools:hover { color: var(--cgi-purple); }
+.btn-tools.has-tools { color: var(--cgi-purple); }
 
 /* ── Attention icon ────────────────────────────────────────── */
 .btn-attention {
