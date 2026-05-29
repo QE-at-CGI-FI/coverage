@@ -25,17 +25,15 @@ const AI_BENEFITS_SUBS = [
 
 const STEP_LABELS = ['Not started', 'Permissions', 'Applied', 'Benefits'];
 
+const TOOL_ITEMS = [
+  { key: 'githubCopilot',  label: 'Github Copilot' },
+  { key: 'amazonQ',        label: 'Amazon Q' },
+  { key: 'codex',          label: 'Codex' },
+  { key: 'claudeCode',     label: 'Claude Code' },
+  { key: 'atlassianRovo',  label: 'Atlassian Rovo' },
+];
+
 const LIMITATION_GROUPS = [
-  {
-    subtitle: 'Tools',
-    items: [
-      { key: 'githubCopilot',  label: 'Github Copilot' },
-      { key: 'amazonQ',        label: 'Amazon Q' },
-      { key: 'codex',          label: 'Codex' },
-      { key: 'claudeCode',     label: 'Claude Code' },
-      { key: 'atlassianRovo',  label: 'Atlassian Rovo' },
-    ]
-  },
   {
     subtitle: 'Settings',
     items: [
@@ -106,12 +104,14 @@ function normaliseClient(c) {
       individual: Boolean(c.aiBenefits?.individual),
       project:    Boolean(c.aiBenefits?.project),
     },
+    tools: {
+      githubCopilot:  Boolean(c.tools?.githubCopilot  ?? c.limitations?.githubCopilot),
+      amazonQ:        Boolean(c.tools?.amazonQ         ?? c.limitations?.amazonQ),
+      codex:          Boolean(c.tools?.codex           ?? c.limitations?.codex),
+      claudeCode:     Boolean(c.tools?.claudeCode      ?? c.limitations?.claudeCode),
+      atlassianRovo:  Boolean(c.tools?.atlassianRovo   ?? c.limitations?.atlassianRovo),
+    },
     limitations: {
-      githubCopilot:        Boolean(c.limitations?.githubCopilot),
-      amazonQ:              Boolean(c.limitations?.amazonQ),
-      codex:                Boolean(c.limitations?.codex),
-      claudeCode:           Boolean(c.limitations?.claudeCode),
-      atlassianRovo:        Boolean(c.limitations?.atlassianRovo),
       mcpControl:           Boolean(c.limitations?.mcpControl),
       confidentialTestData: Boolean(c.limitations?.confidentialTestData),
       noInternetAccess:     Boolean(c.limitations?.noInternetAccess),
@@ -203,6 +203,7 @@ function buildRow(client, index) {
   const name  = displayName(client, index);
   const editable = !anonymised;
   const hasLimits    = LIMITATIONS.some(l => client.limitations[l.key]);
+  const hasTools     = TOOL_ITEMS.some(t => client.tools[t.key]);
   const hasAttention = ATTENTION_ITEMS.some(a => client.attention[a.key]);
 
   return `
@@ -226,6 +227,11 @@ function buildRow(client, index) {
                 data-action="open-limitations"
                 title="${hasLimits ? 'Limitations identified' : 'No limitations set'}"
                 aria-label="Limitations">★</button>
+        <button class="btn-tools${hasTools ? ' has-tools' : ''}"
+                data-id="${escapeHtml(client.id)}"
+                data-action="open-tools"
+                title="${hasTools ? 'Tools tracked' : 'No tools tracked'}"
+                aria-label="Tools">♥</button>
         <button class="btn-attention${hasAttention ? ' has-attention' : ''}"
                 data-id="${escapeHtml(client.id)}"
                 data-action="open-attention"
@@ -408,6 +414,13 @@ function onTableClick(e) {
     return;
   }
 
+  // Tools
+  const toolBtn = e.target.closest('[data-action="open-tools"]');
+  if (toolBtn) {
+    openToolsModal(toolBtn.dataset.id);
+    return;
+  }
+
   // Attention
   const attBtn = e.target.closest('[data-action="open-attention"]');
   if (attBtn) {
@@ -474,6 +487,49 @@ function openLimitationsModal(clientId) {
 
 function closeLimitationsModal() {
   document.getElementById('limitations-overlay').classList.remove('active');
+}
+
+/* ── Tools Modal ──────────────────────────────────────────── */
+function openToolsModal(clientId) {
+  const client = clients.find(c => c.id === clientId);
+  if (!client) return;
+
+  const overlay = document.getElementById('tools-overlay');
+  document.getElementById('tools-title').textContent =
+    `Tools: ${anonymised ? 'Client' : client.name}`;
+
+  const list = document.getElementById('tools-list');
+  list.innerHTML = TOOL_ITEMS.map(t => `
+    <label class="limitations-item">
+      <input type="checkbox"
+             data-tool-id="${escapeHtml(client.id)}"
+             data-tool="${t.key}"
+             ${client.tools[t.key] ? 'checked' : ''} />
+      ${escapeHtml(t.label)}
+    </label>`).join('');
+
+  list.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+    cb.addEventListener('change', () => {
+      const c = clients.find(x => x.id === cb.dataset.toolId);
+      if (!c) return;
+      c.tools[cb.dataset.tool] = cb.checked;
+      const hasTools = TOOL_ITEMS.some(t => c.tools[t.key]);
+      const iconBtn = document.querySelector(
+        `[data-action="open-tools"][data-id="${CSS.escape(c.id)}"]`);
+      if (iconBtn) {
+        iconBtn.classList.toggle('has-tools', hasTools);
+        iconBtn.title = hasTools ? 'Tools tracked' : 'No tools tracked';
+      }
+      saveData();
+    });
+  });
+
+  overlay.classList.add('active');
+  document.getElementById('tools-close').focus();
+}
+
+function closeToolsModal() {
+  document.getElementById('tools-overlay').classList.remove('active');
 }
 
 /* ── Attention Modal ─────────────────────────────────────────── */
@@ -632,6 +688,12 @@ document.addEventListener('DOMContentLoaded', () => {
     if (e.target === e.currentTarget) closeLimitationsModal();
   });
 
+  /* Tools modal */
+  document.getElementById('tools-close').addEventListener('click', closeToolsModal);
+  document.getElementById('tools-overlay').addEventListener('click', e => {
+    if (e.target === e.currentTarget) closeToolsModal();
+  });
+
   /* Attention modal */
   document.getElementById('attention-close').addEventListener('click', closeAttentionModal);
   document.getElementById('attention-overlay').addEventListener('click', e => {
@@ -641,6 +703,7 @@ document.addEventListener('DOMContentLoaded', () => {
   document.addEventListener('keydown', e => {
     if (e.key === 'Escape') {
       closeLimitationsModal();
+      closeToolsModal();
       closeAttentionModal();
       closeModal();
     }
