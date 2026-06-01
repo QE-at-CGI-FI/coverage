@@ -23,7 +23,12 @@ const AI_BENEFITS_SUBS = [
   { key: 'project',    label: 'Project' },
 ];
 
-const STEP_LABELS = ['Not started', 'Permissions', 'Applied', 'Benefits'];
+const WIDTH_SUBS = [
+  { key: 'pointSolutions', label: 'Point Solutions' },
+  { key: 'systemic',       label: 'Systemic' },
+];
+
+const STEP_LABELS = ['Not started', 'Permissions', 'Applied', 'Benefits', 'Width'];
 
 const TOOL_ITEMS = [
   { key: 'githubCopilot',  label: 'Github Copilot' },
@@ -120,6 +125,10 @@ function normaliseClient(c) {
       // migrate from old limitations.useWithoutPermissions if present
       useWithoutPermissions: Boolean(c.attention?.useWithoutPermissions ?? c.limitations?.useWithoutPermissions),
     },
+    width: {
+      pointSolutions: Boolean(c.width?.pointSolutions),
+      systemic:       Boolean(c.width?.systemic),
+    },
   };
 }
 
@@ -145,7 +154,12 @@ function hasBenefits(client) {
   return AI_BENEFITS_SUBS.some(s => client.aiBenefits[s.key]);
 }
 
+function hasWidth(client) {
+  return WIDTH_SUBS.some(s => client.width[s.key]);
+}
+
 function progressLevel(client) {
+  if (hasWidth(client)) return 4;
   if (hasBenefits(client)) return 3;
   if (isAiApplied(client)) return 2;
   if (permCount(client) > 0) return 1;
@@ -166,16 +180,20 @@ function buildProgressSteps(client) {
   const pSt  = cnt === 0 ? 'inactive' : cnt < 4 ? 'partial' : 'complete';
   const aSt  = isAiApplied(client) ? 'complete' : 'inactive';
   const bSt  = hasBenefits(client) ? 'complete' : 'inactive';
-  const l1   = pSt === 'complete' && aSt === 'complete';
-  const l2   = aSt === 'complete' && bSt === 'complete';
+  const wSt  = hasWidth(client) ? 'complete' : 'inactive';
+  const l1   = pSt !== 'inactive' && aSt !== 'inactive';
+  const l2   = aSt === 'complete' && bSt !== 'inactive';
+  const l3   = bSt === 'complete' && wSt !== 'inactive';
 
   return `
     <div class="progress-steps">
       <div class="step-node ${pSt}" title="AI Permissions: ${cnt}/4">${cnt}/4</div>
-      <div class="step-line${pSt !== 'inactive' && aSt !== 'inactive' ? ' lit' : ''}"></div>
-      <div class="step-node ${aSt}" title="AI Applied">A</div>
       <div class="step-line${l1 ? ' lit' : ''}"></div>
+      <div class="step-node ${aSt}" title="AI Applied">A</div>
+      <div class="step-line${l2 ? ' lit' : ''}"></div>
       <div class="step-node ${bSt}" title="AI Benefits">B</div>
+      <div class="step-line${l3 ? ' lit' : ''}"></div>
+      <div class="step-node ${wSt}" title="Width">W</div>
       <span class="step-label-text">${STEP_LABELS[progressLevel(client)]}</span>
     </div>`;
 }
@@ -248,6 +266,14 @@ function buildRow(client, index) {
                aria-label="AI Benefits: ${s.label}"
                ${client.aiBenefits[s.key] ? 'checked' : ''} />
       </td>`).join('')}
+      ${WIDTH_SUBS.map(s => `
+      <td class="check-cell">
+        <input type="checkbox"
+               data-id="${escapeHtml(client.id)}"
+               data-field="width.${s.key}"
+               aria-label="Width: ${s.label}"
+               ${client.width[s.key] ? 'checked' : ''} />
+      </td>`).join('')}
       <td>${buildProgressSteps(client)}</td>
       <td class="check-cell">
         <button class="btn-delete"
@@ -274,7 +300,7 @@ function renderTable() {
       : 'No clients match your search.';
     tbody.innerHTML = `
       <tr>
-        <td colspan="14" class="empty-state">
+        <td colspan="16" class="empty-state">
           <div class="empty-icon">📋</div>
           <div>${msg}</div>
         </td>
@@ -306,17 +332,19 @@ function renderSummary() {
     return;
   }
 
-  const TOTAL_STEPS = 11; // 5 perms + 3 applied + 3 benefits
+  const TOTAL_STEPS = 13; // 5 perms + 3 applied + 3 benefits + 2 width
   const sorted = [...clients].sort((a, b) => a.name.localeCompare(b.name));
   container.innerHTML = sorted.map((client, i) => {
     const cnt           = permCount(client);
     const appliedCount  = AI_APPLIED_SUBS.filter(s => client.aiApplied[s.key]).length;
     const benefitsCount = AI_BENEFITS_SUBS.filter(s => client.aiBenefits[s.key]).length;
-    const steps = cnt + appliedCount + benefitsCount;
+    const widthCount    = WIDTH_SUBS.filter(s => client.width[s.key]).length;
+    const steps = cnt + appliedCount + benefitsCount + widthCount;
     const pct   = Math.round(steps / TOTAL_STEPS * 100);
     const pw    = (cnt           / TOTAL_STEPS * 100).toFixed(1);
     const aw    = (appliedCount  / TOTAL_STEPS * 100).toFixed(1);
     const bw    = (benefitsCount / TOTAL_STEPS * 100).toFixed(1);
+    const ww    = (widthCount    / TOTAL_STEPS * 100).toFixed(1);
     const name  = displayName(client, i);
     const cls   = client.classification;
 
@@ -330,6 +358,7 @@ function renderSummary() {
           <div class="summary-segment" style="width:${pw}%;background:var(--cgi-red)"   title="${cnt} permission(s)"></div>
           <div class="summary-segment" style="width:${aw}%;background:var(--amber)"     title="AI Applied (${appliedCount}/3)"></div>
           <div class="summary-segment" style="width:${bw}%;background:var(--green)"     title="AI Benefits (${benefitsCount}/3)"></div>
+          <div class="summary-segment" style="width:${ww}%;background:var(--blue,#4a90d9)" title="Width (${widthCount}/2)"></div>
         </div>
         <div class="summary-pct">${pct}%</div>
       </div>`;
@@ -355,6 +384,9 @@ function onTableChange(e) {
   } else if (field.startsWith('aiBenefits.')) {
     const key = field.slice('aiBenefits.'.length);
     client.aiBenefits[key] = el.checked;
+  } else if (field.startsWith('width.')) {
+    const key = field.slice('width.'.length);
+    client.width[key] = el.checked;
   } else {
     client[field] = el.checked;
   }

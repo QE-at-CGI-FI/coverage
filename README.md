@@ -30,7 +30,8 @@ A single-page JavaScript application for tracking client progress through CGI's 
 | ↳ Secrets | Can use AI with secrets |
 | **AI Applied** | Three sub-flags: Generative, Agentic, Dark Factory |
 | **AI Benefits** | Three sub-flags: Task, Individual, Project |
-| **Progress** | Visual step indicator: Not started → Permissions → Applied → Benefits |
+| **Width** | Two options: Point Solutions, Systemic |
+| **Progress** | Visual step indicator: Not started → Permissions → Applied → Benefits → Width |
 | **Actions** | Open Limitations or Attention modals for the client |
 
 **Limitations modal** — per-client flags grouped into:
