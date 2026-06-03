@@ -461,12 +461,52 @@ tbody td { padding: .65rem 1rem; font-size: .88rem; vertical-align: middle; }
   border-radius: 3px;
   font-size: .82rem;
   line-height: 1;
-  color: #E5A000;
+  filter: grayscale(1) opacity(0.35);
+  transition: filter .15s;
+  flex-shrink: 0;
+}
+.btn-partner-clients:hover { filter: grayscale(0) opacity(1); }
+.btn-partner-clients.has-clients { filter: grayscale(0) opacity(1); }
+
+/* ── Highlight story icon ──────────────────────────────────── */
+.btn-highlight-story {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 2px 3px;
+  border-radius: 3px;
+  font-size: .82rem;
+  line-height: 1;
+  color: #9CA3AF;
   transition: color .15s;
   flex-shrink: 0;
 }
-.btn-partner-clients:hover { color: var(--cgi-navy); }
-.btn-partner-clients.has-clients { color: var(--cgi-green, #16a34a); }
+.btn-highlight-story:hover { color: var(--amber); }
+.btn-highlight-story.has-story { color: var(--amber); }
+
+/* ── Highlight story modal ─────────────────────────────────── */
+.highlight-story-subtitle {
+  font-size: .82rem;
+  color: var(--cgi-muted);
+  margin-bottom: .75rem;
+}
+.highlight-story-textarea {
+  width: 100%;
+  border: 1px solid var(--cgi-border);
+  border-radius: var(--radius);
+  padding: .6rem .75rem;
+  font-size: .9rem;
+  font-family: inherit;
+  resize: vertical;
+  background: var(--cgi-white);
+  color: var(--cgi-text);
+  transition: border-color .15s;
+}
+.highlight-story-textarea:focus {
+  outline: none;
+  border-color: var(--amber);
+  box-shadow: 0 0 0 2px rgba(240,165,0,.15);
+}
 
 /* ── Partner clients modal ─────────────────────────────────── */
 .partner-clients-add {

@@ -160,6 +160,7 @@ function normaliseClient(c) {
     partnerClients: Array.isArray(c.partnerClients)
       ? c.partnerClients.filter(s => typeof s === 'string' && s.trim())
       : [],
+    highlightStory: typeof c.highlightStory === 'string' ? c.highlightStory : '',
   };
 }
 
@@ -318,6 +319,11 @@ function buildRow(client, index, entityType = 'Client') {
                 data-action="open-partner-clients"
                 title="${partnerClientsTitle}"
                 aria-label="Linked clients">👤</button>` : ''}
+        ${isPartnerRow ? `<button class="btn-highlight-story${client.highlightStory ? ' has-story' : ''}"
+                data-id="${escapeHtml(client.id)}"
+                data-action="open-highlight-story"
+                title="${client.highlightStory ? 'Highlight story recorded' : 'No highlight story yet'}"
+                aria-label="Highlight story">✦</button>` : ''}
       </td>
       ${perms}
       ${appliedCells}
@@ -582,6 +588,13 @@ function onTableClick(e) {
     return;
   }
 
+  // Highlight story
+  const hsBtn = e.target.closest('[data-action="open-highlight-story"]');
+  if (hsBtn) {
+    openHighlightStoryModal(hsBtn.dataset.id);
+    return;
+  }
+
   // Delete
   const btn = e.target.closest('.btn-delete');
   if (!btn) return;
@@ -819,6 +832,45 @@ function closePartnerClientsModal() {
   document.getElementById('partner-clients-overlay').classList.remove('active');
 }
 
+/* ── Highlight Story Modal ──────────────────────────────────── */
+function openHighlightStoryModal(partnerId) {
+  const found = findById(partnerId);
+  if (!found) return;
+  const { entity: partner } = found;
+
+  const overlay = document.getElementById('highlight-story-overlay');
+  document.getElementById('highlight-story-title').textContent =
+    `Highlight Story: ${anonymised ? 'Person' : partner.name}`;
+  overlay.dataset.partnerId = partnerId;
+
+  document.getElementById('highlight-story-textarea').value = partner.highlightStory || '';
+
+  overlay.classList.add('active');
+  requestAnimationFrame(() => document.getElementById('highlight-story-textarea').focus());
+}
+
+function saveHighlightStory() {
+  const overlay = document.getElementById('highlight-story-overlay');
+  const pid = overlay.dataset.partnerId;
+  const found = findById(pid);
+  if (!found) return;
+  const { entity: partner, save: saveEntity } = found;
+  partner.highlightStory = document.getElementById('highlight-story-textarea').value.trim();
+  saveEntity();
+
+  const iconBtn = document.querySelector(
+    `[data-action="open-highlight-story"][data-id="${CSS.escape(partner.id)}"]`);
+  if (iconBtn) {
+    iconBtn.classList.toggle('has-story', !!partner.highlightStory);
+    iconBtn.title = partner.highlightStory ? 'Highlight story recorded' : 'No highlight story yet';
+  }
+  closeHighlightStoryModal();
+}
+
+function closeHighlightStoryModal() {
+  document.getElementById('highlight-story-overlay').classList.remove('active');
+}
+
 /* ── Import / Export ──────────────────────────────────────── */
 function exportData() {
   const json = JSON.stringify(clients, null, 2);
@@ -1033,6 +1085,7 @@ document.addEventListener('DOMContentLoaded', () => {
       closeToolsModal();
       closeAttentionModal();
       closePartnerClientsModal();
+      closeHighlightStoryModal();
       closeModal();
       closeAddPartnerModal();
     }
@@ -1069,6 +1122,13 @@ document.addEventListener('DOMContentLoaded', () => {
   });
   document.getElementById('partner-clients-overlay').addEventListener('click', e => {
     if (e.target === e.currentTarget) closePartnerClientsModal();
+  });
+
+  /* Highlight story modal */
+  document.getElementById('highlight-story-close').addEventListener('click', closeHighlightStoryModal);
+  document.getElementById('highlight-story-save').addEventListener('click', saveHighlightStory);
+  document.getElementById('highlight-story-overlay').addEventListener('click', e => {
+    if (e.target === e.currentTarget) closeHighlightStoryModal();
   });
 
   /* Table (delegated) */
