@@ -157,6 +157,9 @@ function normaliseClient(c) {
       pointSolutions: Boolean(c.width?.pointSolutions),
       systemic:       Boolean(c.width?.systemic),
     },
+    partnerClients: Array.isArray(c.partnerClients)
+      ? c.partnerClients.filter(s => typeof s === 'string' && s.trim())
+      : [],
   };
 }
 
@@ -292,11 +295,11 @@ function buildRow(client, index, entityType = 'Client') {
               role="textbox"
               aria-label="Client name"
               ${anonymised ? 'style="pointer-events:none;user-select:none;"' : ''}>${escapeHtml(name)}</span>
-        <button class="btn-limitations${hasLimits ? ' has-limits' : ''}"
+        ${entityType !== 'Partner' ? `<button class="btn-limitations${hasLimits ? ' has-limits' : ''}"
                 data-id="${escapeHtml(client.id)}"
                 data-action="open-limitations"
                 title="${hasLimits ? 'Limitations identified' : 'No limitations set'}"
-                aria-label="Limitations">★</button>
+                aria-label="Limitations">★</button>` : ''}
         <button class="btn-tools${hasTools ? ' has-tools' : ''}"
                 data-id="${escapeHtml(client.id)}"
                 data-action="open-tools"
@@ -307,6 +310,11 @@ function buildRow(client, index, entityType = 'Client') {
                 data-action="open-attention"
                 title="${hasAttention ? 'Attention: action required' : 'No attention items'}"
                 aria-label="Attention">!</button>
+        ${entityType === 'Partner' ? `<button class="btn-partner-clients${client.partnerClients.length ? ' has-clients' : ''}"
+                data-id="${escapeHtml(client.id)}"
+                data-action="open-partner-clients"
+                title="${client.partnerClients.length ? `${client.partnerClients.length} client(s) linked` : 'No clients linked'}"
+                aria-label="Linked clients">👤</button>` : ''}
       </td>
       ${perms}
       ${appliedCells}
@@ -564,6 +572,13 @@ function onTableClick(e) {
     return;
   }
 
+  // Partner clients
+  const pcBtn = e.target.closest('[data-action="open-partner-clients"]');
+  if (pcBtn) {
+    openPartnerClientsModal(pcBtn.dataset.id);
+    return;
+  }
+
   // Delete
   const btn = e.target.closest('.btn-delete');
   if (!btn) return;
@@ -721,6 +736,84 @@ function openAttentionModal(clientId) {
 
 function closeAttentionModal() {
   document.getElementById('attention-overlay').classList.remove('active');
+}
+
+/* ── Partner Clients Modal ─────────────────────────────────── */
+function openPartnerClientsModal(partnerId) {
+  const found = findById(partnerId);
+  if (!found) return;
+  const { entity: partner } = found;
+
+  const overlay = document.getElementById('partner-clients-overlay');
+  document.getElementById('partner-clients-title').textContent =
+    `Clients: ${anonymised ? 'Partner' : partner.name}`;
+  overlay.dataset.partnerId = partnerId;
+
+  renderPartnerClientsList(partner);
+
+  const input = document.getElementById('partner-clients-input');
+  input.value = '';
+  overlay.classList.add('active');
+  requestAnimationFrame(() => input.focus());
+}
+
+function renderPartnerClientsList(partner) {
+  const list = document.getElementById('partner-clients-list');
+  if (partner.partnerClients.length === 0) {
+    list.innerHTML = '<p class="partner-clients-empty">No clients linked yet.</p>';
+    return;
+  }
+  list.innerHTML = partner.partnerClients.map((name, idx) => `
+    <div class="partner-client-item">
+      <span>${escapeHtml(name)}</span>
+      <button class="btn-remove-client" data-idx="${idx}" aria-label="Remove ${escapeHtml(name)}">✕</button>
+    </div>`).join('');
+
+  list.querySelectorAll('.btn-remove-client').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const overlay = document.getElementById('partner-clients-overlay');
+      const pid = overlay.dataset.partnerId;
+      const innerFound = findById(pid);
+      if (!innerFound) return;
+      const { entity: p, save: saveEntity } = innerFound;
+      p.partnerClients.splice(Number(btn.dataset.idx), 1);
+      saveEntity();
+      updatePartnerClientsButton(p);
+      renderPartnerClientsList(p);
+    });
+  });
+}
+
+function addPartnerClient() {
+  const overlay = document.getElementById('partner-clients-overlay');
+  const pid = overlay.dataset.partnerId;
+  const found = findById(pid);
+  if (!found) return;
+  const { entity: partner, save: saveEntity } = found;
+  const input = document.getElementById('partner-clients-input');
+  const name = input.value.trim();
+  if (!name) { input.focus(); return; }
+  if (!partner.partnerClients.includes(name)) {
+    partner.partnerClients.push(name);
+    saveEntity();
+    updatePartnerClientsButton(partner);
+  }
+  input.value = '';
+  input.focus();
+  renderPartnerClientsList(partner);
+}
+
+function updatePartnerClientsButton(partner) {
+  const btn = document.querySelector(
+    `[data-action="open-partner-clients"][data-id="${CSS.escape(partner.id)}"]`);
+  if (!btn) return;
+  const count = partner.partnerClients.length;
+  btn.classList.toggle('has-clients', count > 0);
+  btn.title = count > 0 ? `${count} client(s) linked` : 'No clients linked';
+}
+
+function closePartnerClientsModal() {
+  document.getElementById('partner-clients-overlay').classList.remove('active');
 }
 
 /* ── Import / Export ──────────────────────────────────────── */
@@ -936,6 +1029,7 @@ document.addEventListener('DOMContentLoaded', () => {
       closeLimitationsModal();
       closeToolsModal();
       closeAttentionModal();
+      closePartnerClientsModal();
       closeModal();
       closeAddPartnerModal();
     }
@@ -961,6 +1055,17 @@ document.addEventListener('DOMContentLoaded', () => {
   });
   document.getElementById('partner-modal-overlay').addEventListener('click', e => {
     if (e.target === e.currentTarget) closeAddPartnerModal();
+  });
+
+  /* Partner clients modal */
+  document.getElementById('partner-clients-close').addEventListener('click', closePartnerClientsModal);
+  document.getElementById('partner-clients-add-btn').addEventListener('click', addPartnerClient);
+  document.getElementById('partner-clients-input').addEventListener('keydown', e => {
+    if (e.key === 'Enter')  addPartnerClient();
+    if (e.key === 'Escape') closePartnerClientsModal();
+  });
+  document.getElementById('partner-clients-overlay').addEventListener('click', e => {
+    if (e.target === e.currentTarget) closePartnerClientsModal();
   });
 
   /* Table (delegated) */

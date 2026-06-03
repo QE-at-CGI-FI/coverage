@@ -452,6 +452,58 @@ tbody td { padding: .65rem 1rem; font-size: .88rem; vertical-align: middle; }
 .btn-attention:hover { color: var(--cgi-navy); border-color: var(--cgi-navy); }
 .btn-attention.has-attention { color: var(--cgi-red); border-color: var(--cgi-red); }
 
+/* ── Partner clients icon ──────────────────────────────────── */
+.btn-partner-clients {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 2px 3px;
+  border-radius: 3px;
+  font-size: .82rem;
+  line-height: 1;
+  color: #9CA3AF;
+  transition: color .15s;
+  flex-shrink: 0;
+}
+.btn-partner-clients:hover { color: var(--cgi-navy); }
+.btn-partner-clients.has-clients { color: var(--cgi-green, #16a34a); }
+
+/* ── Partner clients modal ─────────────────────────────────── */
+.partner-clients-add {
+  display: flex;
+  gap: .5rem;
+  margin: .75rem 0 .25rem;
+}
+.partner-clients-add input {
+  flex: 1;
+}
+.partner-client-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: .35rem .5rem;
+  border-radius: 4px;
+  background: var(--surface, #f9fafb);
+  margin-bottom: .3rem;
+  font-size: .88rem;
+}
+.btn-remove-client {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #9CA3AF;
+  font-size: .75rem;
+  padding: 0 2px;
+  line-height: 1;
+  transition: color .15s;
+}
+.btn-remove-client:hover { color: var(--cgi-red); }
+.partner-clients-empty {
+  font-size: .85rem;
+  color: var(--cgi-muted);
+  margin: .5rem 0;
+}
+
 /* ── Attention modal subtitle ──────────────────────────────── */
 .attention-subtitle {
   font-size: .82rem;
