@@ -318,12 +318,12 @@ function buildRow(client, index, entityType = 'Client') {
                 data-id="${escapeHtml(client.id)}"
                 data-action="open-partner-clients"
                 title="${partnerClientsTitle}"
-                aria-label="Linked clients">👤</button>` : ''}
+                aria-label="Linked clients">◉</button>` : ''}
         ${isPartnerRow ? `<button class="btn-highlight-story${client.highlightStory ? ' has-story' : ''}"
                 data-id="${escapeHtml(client.id)}"
                 data-action="open-highlight-story"
                 title="${client.highlightStory ? 'Highlight story recorded' : 'No highlight story yet'}"
-                aria-label="Highlight story">✦</button>` : ''}
+                aria-label="Highlight story">★</button>` : ''}
       </td>
       ${perms}
       ${appliedCells}

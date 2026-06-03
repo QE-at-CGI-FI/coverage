@@ -461,12 +461,12 @@ tbody td { padding: .65rem 1rem; font-size: .88rem; vertical-align: middle; }
   border-radius: 3px;
   font-size: .82rem;
   line-height: 1;
-  filter: grayscale(1) opacity(0.35);
-  transition: filter .15s;
+  color: #9CA3AF;
+  transition: color .15s;
   flex-shrink: 0;
 }
-.btn-partner-clients:hover { filter: grayscale(0) opacity(1); }
-.btn-partner-clients.has-clients { filter: grayscale(0) opacity(1); }
+.btn-partner-clients:hover { color: var(--cgi-purple); }
+.btn-partner-clients.has-clients { color: var(--cgi-purple); }
 
 /* ── Highlight story icon ──────────────────────────────────── */
 .btn-highlight-story {
@@ -481,8 +481,8 @@ tbody td { padding: .65rem 1rem; font-size: .88rem; vertical-align: middle; }
   transition: color .15s;
   flex-shrink: 0;
 }
-.btn-highlight-story:hover { color: var(--amber); }
-.btn-highlight-story.has-story { color: var(--amber); }
+.btn-highlight-story:hover { color: var(--cgi-purple); }
+.btn-highlight-story.has-story { color: var(--cgi-purple); }
 
 /* ── Highlight story modal ─────────────────────────────────── */
 .highlight-story-subtitle {
