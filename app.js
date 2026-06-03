@@ -217,24 +217,35 @@ function escapeHtml(str) {
 
 /* ── Rendering ─────────────────────────────────────────────── */
 function buildProgressSteps(client) {
-  const cnt  = permCount(client);
-  const pSt  = cnt === 0 ? 'inactive' : cnt < 4 ? 'partial' : 'complete';
-  const aSt  = isAiApplied(client) ? 'complete' : 'inactive';
-  const bSt  = hasBenefits(client) ? 'complete' : 'inactive';
-  const wSt  = hasWidth(client) ? 'complete' : 'inactive';
+  const pCnt = permCount(client);
+  const pTot = PERMISSIONS.length;
+  const pSt  = pCnt === 0 ? 'inactive' : pCnt < pTot ? 'partial' : 'complete';
+
+  const aCnt = AI_APPLIED_SUBS.filter(s => client.aiApplied[s.key]).length;
+  const aTot = AI_APPLIED_SUBS.length;
+  const aSt  = aCnt === 0 ? 'inactive' : aCnt < aTot ? 'partial' : 'complete';
+
+  const bCnt = AI_BENEFITS_SUBS.filter(s => client.aiBenefits[s.key]).length;
+  const bTot = AI_BENEFITS_SUBS.length;
+  const bSt  = bCnt === 0 ? 'inactive' : bCnt < bTot ? 'partial' : 'complete';
+
+  const wCnt = WIDTH_SUBS.filter(s => client.width[s.key]).length;
+  const wTot = WIDTH_SUBS.length;
+  const wSt  = wCnt === 0 ? 'inactive' : wCnt < wTot ? 'partial' : 'complete';
+
   const l1   = pSt !== 'inactive' && aSt !== 'inactive';
-  const l2   = aSt === 'complete' && bSt !== 'inactive';
-  const l3   = bSt === 'complete' && wSt !== 'inactive';
+  const l2   = aSt !== 'inactive' && bSt !== 'inactive';
+  const l3   = bSt !== 'inactive' && wSt !== 'inactive';
 
   return `
     <div class="progress-steps">
-      <div class="step-node ${pSt}" title="AI Permissions: ${cnt}/4">${cnt}/4</div>
+      <div class="step-node ${pSt}" title="AI Permissions: ${pCnt}/${pTot}">${pCnt}/${pTot}</div>
       <div class="step-line${l1 ? ' lit' : ''}"></div>
-      <div class="step-node ${aSt}" title="AI Applied">A</div>
+      <div class="step-node ${aSt}" title="AI Applied: ${aCnt}/${aTot}">${aCnt}/${aTot}</div>
       <div class="step-line${l2 ? ' lit' : ''}"></div>
-      <div class="step-node ${bSt}" title="AI Benefits">B</div>
+      <div class="step-node ${bSt}" title="AI Benefits: ${bCnt}/${bTot}">${bCnt}/${bTot}</div>
       <div class="step-line${l3 ? ' lit' : ''}"></div>
-      <div class="step-node ${wSt}" title="Width">W</div>
+      <div class="step-node ${wSt}" title="Width: ${wCnt}/${wTot}">${wCnt}/${wTot}</div>
       <span class="step-label-text">${STEP_LABELS[progressLevel(client)]}</span>
     </div>`;
 }
