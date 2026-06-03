@@ -278,6 +278,9 @@ function buildRow(client, index, entityType = 'Client') {
   const hasLimits    = LIMITATIONS.some(l => client.limitations[l.key]);
   const hasTools     = TOOL_ITEMS.some(t => client.tools[t.key]);
   const hasAttention = ATTENTION_ITEMS.some(a => client.attention[a.key]);
+  const isPartnerRow = entityType === 'Partner';
+  const partnerClientCount = isPartnerRow ? (client.partnerClients || []).length : 0;
+  const partnerClientsTitle = partnerClientCount ? partnerClientCount + ' client(s) linked' : 'No clients linked';
 
   return `
     <tr data-id="${escapeHtml(client.id)}">
@@ -295,7 +298,7 @@ function buildRow(client, index, entityType = 'Client') {
               role="textbox"
               aria-label="Client name"
               ${anonymised ? 'style="pointer-events:none;user-select:none;"' : ''}>${escapeHtml(name)}</span>
-        ${entityType !== 'Partner' ? `<button class="btn-limitations${hasLimits ? ' has-limits' : ''}"
+        ${!isPartnerRow ? `<button class="btn-limitations${hasLimits ? ' has-limits' : ''}"
                 data-id="${escapeHtml(client.id)}"
                 data-action="open-limitations"
                 title="${hasLimits ? 'Limitations identified' : 'No limitations set'}"
@@ -310,10 +313,10 @@ function buildRow(client, index, entityType = 'Client') {
                 data-action="open-attention"
                 title="${hasAttention ? 'Attention: action required' : 'No attention items'}"
                 aria-label="Attention">!</button>
-        ${entityType === 'Partner' ? `<button class="btn-partner-clients${client.partnerClients.length ? ' has-clients' : ''}"
+        ${isPartnerRow ? `<button class="btn-partner-clients${partnerClientCount ? ' has-clients' : ''}"
                 data-id="${escapeHtml(client.id)}"
                 data-action="open-partner-clients"
-                title="${client.partnerClients.length ? `${client.partnerClients.length} client(s) linked` : 'No clients linked'}"
+                title="${partnerClientsTitle}"
                 aria-label="Linked clients">👤</button>` : ''}
       </td>
       ${perms}
