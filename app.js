@@ -12,9 +12,10 @@ const PERMISSIONS = [
 ];
 
 const AI_APPLIED_SUBS = [
-  { key: 'generative',  label: 'Generative' },
-  { key: 'agentic',     label: 'Agentic' },
-  { key: 'darkFactory', label: 'Dark Factory' },
+  { key: 'generative',       label: 'Generative' },
+  { key: 'reactiveAgentic',  label: 'Reactive Agentic' },
+  { key: 'proactiveAgentic', label: 'Proactive Agentic' },
+  { key: 'darkFactory',      label: 'Dark Factory' },
 ];
 
 const AI_BENEFITS_SUBS = [
@@ -100,9 +101,10 @@ function normaliseClient(c) {
       secrets:       Boolean(c.permissions?.secrets),
     },
     aiApplied: {
-      generative:  Boolean(c.aiApplied?.generative),
-      agentic:     Boolean(c.aiApplied?.agentic),
-      darkFactory: Boolean(c.aiApplied?.darkFactory),
+      generative:       Boolean(c.aiApplied?.generative),
+      reactiveAgentic:  Boolean(c.aiApplied?.reactiveAgentic ?? c.aiApplied?.agentic),
+      proactiveAgentic: Boolean(c.aiApplied?.proactiveAgentic),
+      darkFactory:      Boolean(c.aiApplied?.darkFactory),
     },
     aiBenefits: {
       task:       Boolean(c.aiBenefits?.task ?? (typeof c.aiBenefits === 'boolean' && c.aiBenefits)),

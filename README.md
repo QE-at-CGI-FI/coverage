@@ -28,7 +28,7 @@ A single-page JavaScript application for tracking client progress through CGI's 
 | ↳ Code | Can use AI for code |
 | ↳ Agentic | Can use AI for agentic access |
 | ↳ Secrets | Can use AI with secrets |
-| **AI Applied** | Three sub-flags: Generative, Agentic, Dark Factory |
+| **AI Applied** | Three sub-flags: Generative, Reactive Agentic, Proactive agentic, Dark Factory |
 | **AI Benefits** | Three sub-flags: Task, Individual, Project |
 | **Width** | Two options: Point Solutions, Systemic |
 | **Progress** | Visual step indicator: Not started → Permissions → Applied → Benefits → Width |
