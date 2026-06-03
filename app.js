@@ -2,6 +2,7 @@
 
 /* ── Constants ─────────────────────────────────────────────── */
 const STORAGE_KEY = 'cgi-ai-coverage-v1';
+const STORAGE_KEY_PARTNERS = 'cgi-ai-coverage-partners-v1';
 
 const PERMISSIONS = [
   { key: 'workQuestions', label: 'Can use work-related questions' },
@@ -60,6 +61,7 @@ const CLASSIFICATION_LABELS = { none: 'Unclassified', red: 'Red', purple: 'Purpl
 
 /* ── State ─────────────────────────────────────────────── */
 let clients = [];
+let partners = [];
 let anonymised = false;
 
 /* ── Persistence ───────────────────────────────────────────── */
@@ -68,6 +70,14 @@ function saveData() {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(clients));
   } catch (e) {
     console.error('Failed to save data:', e);
+  }
+}
+
+function savePartners() {
+  try {
+    localStorage.setItem(STORAGE_KEY_PARTNERS, JSON.stringify(partners));
+  } catch (e) {
+    console.error('Failed to save partners:', e);
   }
 }
 
@@ -85,6 +95,22 @@ function loadData() {
     console.error('Failed to load data:', e);
   }
   clients = [];
+}
+
+function loadPartners() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY_PARTNERS);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) {
+        partners = parsed.map(normaliseClient);
+        return;
+      }
+    }
+  } catch (e) {
+    console.error('Failed to load partners:', e);
+  }
+  partners = [];
 }
 
 /* Ensure backward-compatible shape when loading older snapshots */
@@ -135,12 +161,25 @@ function normaliseClient(c) {
 }
 
 /* Return display name — anonymised or real */
-function displayName(client, index) {
-  return anonymised ? `Client ${index + 1}` : client.name;
+function displayName(entity, index, entityType = 'Client') {
+  return anonymised ? `${entityType} ${index + 1}` : entity.name;
 }
 
 function createClient(name) {
   return normaliseClient({ id: Date.now().toString(), name });
+}
+
+function createPartner(name) {
+  return normaliseClient({ id: Date.now().toString(), name });
+}
+
+/* Find an entity by id in either clients or partners */
+function findById(id) {
+  const inClients = clients.find(c => c.id === id);
+  if (inClients) return { entity: inClients, save: saveData, isPartner: false };
+  const inPartners = partners.find(p => p.id === id);
+  if (inPartners) return { entity: inPartners, save: savePartners, isPartner: true };
+  return null;
 }
 
 /* ── Helpers ───────────────────────────────────────────────── */
@@ -200,7 +239,7 @@ function buildProgressSteps(client) {
     </div>`;
 }
 
-function buildRow(client, index) {
+function buildRow(client, index, entityType = 'Client') {
   const perms = PERMISSIONS.map(p => `
     <td class="check-cell">
       <input type="checkbox"
@@ -220,7 +259,7 @@ function buildRow(client, index) {
     </td>`).join('');
 
   const cls   = client.classification;
-  const name  = displayName(client, index);
+  const name  = displayName(client, index, entityType);
   const editable = !anonymised;
   const hasLimits    = LIMITATIONS.some(l => client.limitations[l.key]);
   const hasTools     = TOOL_ITEMS.some(t => client.tools[t.key]);
@@ -327,6 +366,47 @@ function updateStats() {
   document.getElementById('stat-benefits').textContent    = pct(benefits);
 }
 
+function renderPartnersTable() {
+  const tbody      = document.getElementById('partners-tbody');
+  const searchTerm = document.getElementById('partners-search-input').value.trim().toLowerCase();
+
+  const filtered = (!anonymised && searchTerm)
+    ? partners.filter(p => p.name.toLowerCase().includes(searchTerm))
+    : partners;
+
+  const sorted = [...filtered].sort((a, b) => a.name.localeCompare(b.name));
+
+  if (sorted.length === 0) {
+    const msg = partners.length === 0
+      ? 'No partners yet. Click "+ Add Partner" to get started.'
+      : 'No partners match your search.';
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="16" class="empty-state">
+          <div class="empty-icon">📋</div>
+          <div>${msg}</div>
+        </td>
+      </tr>`;
+  } else {
+    tbody.innerHTML = sorted.map((p, i) => buildRow(p, i, 'Partner')).join('');
+  }
+
+  updatePartnersStats();
+}
+
+function updatePartnersStats() {
+  const total    = partners.length;
+  const withPerm = partners.filter(p => permCount(p) > 0).length;
+  const applied  = partners.filter(p => isAiApplied(p)).length;
+  const benefits = partners.filter(p => hasBenefits(p)).length;
+  const pct      = n => total ? `${Math.round(n / total * 100)}%` : '0%';
+
+  document.getElementById('pstat-total').textContent       = total;
+  document.getElementById('pstat-permissions').textContent = pct(withPerm);
+  document.getElementById('pstat-applied').textContent     = pct(applied);
+  document.getElementById('pstat-benefits').textContent    = pct(benefits);
+}
+
 function renderSummary() {
   const container = document.getElementById('summary-chart');
   if (clients.length === 0) {
@@ -374,8 +454,9 @@ function onTableChange(e) {
   const { id, field } = el.dataset;
   if (!id) return;
 
-  const client = clients.find(c => c.id === id);
-  if (!client) return;
+  const found = findById(id);
+  if (!found) return;
+  const { entity: client, save: saveEntity, isPartner: entityIsPartner } = found;
 
   if (field.startsWith('permissions.')) {
     const key = field.slice('permissions.'.length);
@@ -393,16 +474,18 @@ function onTableChange(e) {
     client[field] = el.checked;
   }
 
-  saveData();
-  renderTable();
+  saveEntity();
+  if (entityIsPartner) renderPartnersTable();
+  else renderTable();
 }
 
 function onTableBlur(e) {
   const el = e.target;
   if (!el.classList.contains('client-name')) return;
   const { id } = el.dataset;
-  const client = clients.find(c => c.id === id);
-  if (!client) return;
+  const found = findById(id);
+  if (!found) return;
+  const { entity: client, save: saveEntity, isPartner: entityIsPartner } = found;
 
   const newName = el.textContent.trim();
   if (!newName) {
@@ -411,9 +494,13 @@ function onTableBlur(e) {
   }
   if (newName !== client.name) {
     client.name = newName;
-    saveData();
-    renderSummary();
-    updateStats();
+    saveEntity();
+    if (entityIsPartner) {
+      updatePartnersStats();
+    } else {
+      renderSummary();
+      updateStats();
+    }
   }
 }
 
@@ -430,13 +517,17 @@ function onTableClick(e) {
   const dot = e.target.closest('[data-action="cycle-classification"]');
   if (dot) {
     const { id } = dot.dataset;
-    const client = clients.find(c => c.id === id);
-    if (client) {
+    const found = findById(id);
+    if (found) {
+      const { entity: client, save: saveEntity, isPartner: entityIsPartner } = found;
       const next = (CLASSIFICATIONS.indexOf(client.classification) + 1) % CLASSIFICATIONS.length;
       client.classification = CLASSIFICATIONS[next];
-      saveData();
-      renderTable();
-      if (document.getElementById('tab-summary').classList.contains('active')) renderSummary();
+      saveEntity();
+      if (entityIsPartner) renderPartnersTable();
+      else {
+        renderTable();
+        if (document.getElementById('tab-summary').classList.contains('active')) renderSummary();
+      }
     }
     return;
   }
@@ -466,24 +557,31 @@ function onTableClick(e) {
   const btn = e.target.closest('.btn-delete');
   if (!btn) return;
   const { id } = btn.dataset;
-  const client = clients.find(c => c.id === id);
-  const name   = client ? client.name : 'this client';
+  const found = findById(id);
+  const name  = found ? found.entity.name : 'this entry';
 
   if (!confirm(`Delete "${name}"? This cannot be undone.`)) return;
-  clients = clients.filter(c => c.id !== id);
-  saveData();
-  renderTable();
-  renderSummary();
+  if (found && found.isPartner) {
+    partners = partners.filter(p => p.id !== id);
+    savePartners();
+    renderPartnersTable();
+  } else {
+    clients = clients.filter(c => c.id !== id);
+    saveData();
+    renderTable();
+    renderSummary();
+  }
 }
 
 /* ── Limitations Modal ────────────────────────────────────── */
 function openLimitationsModal(clientId) {
-  const client = clients.find(c => c.id === clientId);
-  if (!client) return;
+  const found = findById(clientId);
+  if (!found) return;
+  const { entity: client } = found;
 
   const overlay = document.getElementById('limitations-overlay');
   document.getElementById('limitations-title').textContent =
-    `Limitations: ${anonymised ? 'Client' : client.name}`;
+    `Limitations: ${anonymised ? 'Entity' : client.name}`;
 
   const list = document.getElementById('limitations-list');
   list.innerHTML = LIMITATION_GROUPS.map(group => `
@@ -501,8 +599,9 @@ function openLimitationsModal(clientId) {
 
   list.querySelectorAll('input[type="checkbox"]').forEach(cb => {
     cb.addEventListener('change', () => {
-      const c = clients.find(x => x.id === cb.dataset.limId);
-      if (!c) return;
+      const innerFound = findById(cb.dataset.limId);
+      if (!innerFound) return;
+      const { entity: c, save: saveEntity } = innerFound;
       c.limitations[cb.dataset.limitation] = cb.checked;
       const hasLimits = LIMITATIONS.some(l => c.limitations[l.key]);
       const iconBtn = document.querySelector(
@@ -511,7 +610,7 @@ function openLimitationsModal(clientId) {
         iconBtn.classList.toggle('has-limits', hasLimits);
         iconBtn.title = hasLimits ? 'Limitations identified' : 'No limitations set';
       }
-      saveData();
+      saveEntity();
     });
   });
 
@@ -525,12 +624,13 @@ function closeLimitationsModal() {
 
 /* ── Tools Modal ──────────────────────────────────────────── */
 function openToolsModal(clientId) {
-  const client = clients.find(c => c.id === clientId);
-  if (!client) return;
+  const found = findById(clientId);
+  if (!found) return;
+  const { entity: client } = found;
 
   const overlay = document.getElementById('tools-overlay');
   document.getElementById('tools-title').textContent =
-    `Tools: ${anonymised ? 'Client' : client.name}`;
+    `Tools: ${anonymised ? 'Entity' : client.name}`;
 
   const list = document.getElementById('tools-list');
   list.innerHTML = TOOL_ITEMS.map(t => `
@@ -544,8 +644,9 @@ function openToolsModal(clientId) {
 
   list.querySelectorAll('input[type="checkbox"]').forEach(cb => {
     cb.addEventListener('change', () => {
-      const c = clients.find(x => x.id === cb.dataset.toolId);
-      if (!c) return;
+      const innerFound = findById(cb.dataset.toolId);
+      if (!innerFound) return;
+      const { entity: c, save: saveEntity } = innerFound;
       c.tools[cb.dataset.tool] = cb.checked;
       const hasTools = TOOL_ITEMS.some(t => c.tools[t.key]);
       const iconBtn = document.querySelector(
@@ -554,7 +655,7 @@ function openToolsModal(clientId) {
         iconBtn.classList.toggle('has-tools', hasTools);
         iconBtn.title = hasTools ? 'Tools tracked' : 'No tools tracked';
       }
-      saveData();
+      saveEntity();
     });
   });
 
@@ -568,12 +669,13 @@ function closeToolsModal() {
 
 /* ── Attention Modal ─────────────────────────────────────────── */
 function openAttentionModal(clientId) {
-  const client = clients.find(c => c.id === clientId);
-  if (!client) return;
+  const found = findById(clientId);
+  if (!found) return;
+  const { entity: client } = found;
 
   const overlay = document.getElementById('attention-overlay');
   document.getElementById('attention-title').textContent =
-    `Attention: ${anonymised ? 'Client' : client.name}`;
+    `Attention: ${anonymised ? 'Entity' : client.name}`;
 
   const list = document.getElementById('attention-list');
   list.innerHTML = ATTENTION_ITEMS.map(a => `
@@ -587,8 +689,9 @@ function openAttentionModal(clientId) {
 
   list.querySelectorAll('input[type="checkbox"]').forEach(cb => {
     cb.addEventListener('change', () => {
-      const c = clients.find(x => x.id === cb.dataset.attId);
-      if (!c) return;
+      const innerFound = findById(cb.dataset.attId);
+      if (!innerFound) return;
+      const { entity: c, save: saveEntity } = innerFound;
       c.attention[cb.dataset.attention] = cb.checked;
       const hasAttention = ATTENTION_ITEMS.some(a => c.attention[a.key]);
       const iconBtn = document.querySelector(
@@ -597,7 +700,7 @@ function openAttentionModal(clientId) {
         iconBtn.classList.toggle('has-attention', hasAttention);
         iconBtn.title = hasAttention ? 'Attention: action required' : 'No attention items';
       }
-      saveData();
+      saveEntity();
     });
   });
 
@@ -640,6 +743,36 @@ function importData(file) {
   reader.readAsText(file);
 }
 
+/* ── Partners Import / Export ─────────────────────────────── */
+function exportPartnersData() {
+  const json = JSON.stringify(partners, null, 2);
+  const blob = new Blob([json], { type: 'application/json' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = `ai-coverage-partners-${new Date().toISOString().slice(0, 10)}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function importPartnersData(file) {
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      const parsed = JSON.parse(e.target.result);
+      if (!Array.isArray(parsed)) throw new Error('Expected a JSON array');
+      if (!confirm(`Import ${parsed.length} partner(s)? This will replace all current partner data.`)) return;
+      partners = parsed.map(normaliseClient);
+      savePartners();
+      renderPartnersTable();
+    } catch (err) {
+      alert(`Import failed: ${err.message}`);
+    }
+  };
+  reader.readAsText(file);
+}
+
 /* ── Modal ─────────────────────────────────────────────────── */
 function openModal() {
   const overlay = document.getElementById('modal-overlay');
@@ -668,6 +801,52 @@ function confirmAddClient() {
   closeModal();
 }
 
+/* ── Add Partner Modal ─────────────────────────────────────── */
+function openAddPartnerModal() {
+  const overlay = document.getElementById('partner-modal-overlay');
+  const input   = document.getElementById('new-partner-name');
+  overlay.classList.add('active');
+  input.value = '';
+  requestAnimationFrame(() => input.focus());
+}
+
+function closeAddPartnerModal() {
+  document.getElementById('partner-modal-overlay').classList.remove('active');
+}
+
+function confirmAddPartner() {
+  const input = document.getElementById('new-partner-name');
+  const name  = input.value.trim();
+  if (!name) {
+    input.focus();
+    return;
+  }
+  partners.push(createPartner(name));
+  savePartners();
+  renderPartnersTable();
+  closeAddPartnerModal();
+}
+
+/* ── Anonymize toggle ──────────────────────────────────────── */
+function toggleAnonymize() {
+  anonymised = !anonymised;
+  ['anon-toggle', 'partners-anon-toggle'].forEach(id => {
+    const btn = document.getElementById(id);
+    if (!btn) return;
+    btn.setAttribute('aria-pressed', String(anonymised));
+    btn.classList.toggle('active', anonymised);
+  });
+  const searchInput = document.getElementById('search-input');
+  searchInput.disabled = anonymised;
+  searchInput.placeholder = anonymised ? 'Search disabled while anonymised' : 'Search clients…';
+  const partnersSearchInput = document.getElementById('partners-search-input');
+  partnersSearchInput.disabled = anonymised;
+  partnersSearchInput.placeholder = anonymised ? 'Search disabled while anonymised' : 'Search partners…';
+  renderTable();
+  renderPartnersTable();
+  if (document.getElementById('tab-summary').classList.contains('active')) renderSummary();
+}
+
 /* ── Tabs ──────────────────────────────────────────────────── */
 function switchTab(tabId) {
   document.querySelectorAll('.tab-btn').forEach(btn => {
@@ -678,12 +857,15 @@ function switchTab(tabId) {
     pane.classList.toggle('active', pane.id === `tab-${tabId}`);
   });
   if (tabId === 'summary') renderSummary();
+  if (tabId === 'partners') renderPartnersTable();
 }
 
 /* ── Bootstrap ─────────────────────────────────────────────── */
 document.addEventListener('DOMContentLoaded', () => {
   loadData();
+  loadPartners();
   renderTable();
+  renderPartnersTable();
 
   /* Tab switching */
   document.querySelectorAll('.tab-btn').forEach(btn => {
@@ -704,16 +886,20 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   /* Anonymize toggle */
-  document.getElementById('anon-toggle').addEventListener('click', () => {
-    anonymised = !anonymised;
-    const btn = document.getElementById('anon-toggle');
-    btn.setAttribute('aria-pressed', String(anonymised));
-    btn.classList.toggle('active', anonymised);
-    const searchInput = document.getElementById('search-input');
-    searchInput.disabled = anonymised;
-    searchInput.placeholder = anonymised ? 'Search disabled while anonymised' : 'Search clients…';
-    renderTable();
-    if (document.getElementById('tab-summary').classList.contains('active')) renderSummary();
+  document.getElementById('anon-toggle').addEventListener('click', toggleAnonymize);
+
+  /* Partners toolbar */
+  document.getElementById('add-partner-btn').addEventListener('click', openAddPartnerModal);
+  document.getElementById('partners-anon-toggle').addEventListener('click', toggleAnonymize);
+  document.getElementById('partners-search-input').addEventListener('input', renderPartnersTable);
+  document.getElementById('partners-export-btn').addEventListener('click', exportPartnersData);
+  document.getElementById('partners-import-btn').addEventListener('click', () => {
+    const input = document.getElementById('partners-import-file-input');
+    input.value = '';
+    input.click();
+  });
+  document.getElementById('partners-import-file-input').addEventListener('change', (e) => {
+    importPartnersData(e.target.files[0]);
   });
 
   /* Limitations modal */
@@ -740,6 +926,7 @@ document.addEventListener('DOMContentLoaded', () => {
       closeToolsModal();
       closeAttentionModal();
       closeModal();
+      closeAddPartnerModal();
     }
   });
 
@@ -754,10 +941,28 @@ document.addEventListener('DOMContentLoaded', () => {
     if (e.target === e.currentTarget) closeModal();
   });
 
+  /* Partner modal */
+  document.getElementById('partner-modal-cancel') .addEventListener('click', closeAddPartnerModal);
+  document.getElementById('partner-modal-confirm').addEventListener('click', confirmAddPartner);
+  document.getElementById('new-partner-name').addEventListener('keydown', e => {
+    if (e.key === 'Enter')  confirmAddPartner();
+    if (e.key === 'Escape') closeAddPartnerModal();
+  });
+  document.getElementById('partner-modal-overlay').addEventListener('click', e => {
+    if (e.target === e.currentTarget) closeAddPartnerModal();
+  });
+
   /* Table (delegated) */
   const tbody = document.getElementById('coverage-tbody');
   tbody.addEventListener('change',  onTableChange);
   tbody.addEventListener('blur',    onTableBlur,    { capture: true });
   tbody.addEventListener('keydown', onTableKeydown);
   tbody.addEventListener('click',   onTableClick);
+
+  /* Partners table (delegated) */
+  const ptbody = document.getElementById('partners-tbody');
+  ptbody.addEventListener('change',  onTableChange);
+  ptbody.addEventListener('blur',    onTableBlur,    { capture: true });
+  ptbody.addEventListener('keydown', onTableKeydown);
+  ptbody.addEventListener('click',   onTableClick);
 });

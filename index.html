@@ -19,7 +19,8 @@
   </header>
 
   <nav class="tab-nav">
-    <button class="tab-btn active" data-tab="coverage">Coverage Tracking</button>
+    <button class="tab-btn active" data-tab="coverage">Coverage – Companies</button>
+    <button class="tab-btn" data-tab="partners">Coverage – Partners</button>
     <button class="tab-btn" data-tab="summary">Summary</button>
   </nav>
 
@@ -96,6 +97,77 @@
       </div>
     </div>
 
+    <!-- ── Partners Coverage Tab ── -->
+    <div class="tab-content" id="tab-partners">
+
+      <div class="toolbar">
+        <div class="toolbar-left">
+          <button class="btn-primary" id="add-partner-btn">+ Add Partner</button>
+          <button class="btn-anon" id="partners-anon-toggle" aria-pressed="false" title="Hide real partner names">
+            <span class="anon-icon">👁</span> Anonymize
+          </button>
+          <button class="btn-secondary" id="partners-export-btn" title="Export data as JSON">⬇ Export</button>
+          <button class="btn-secondary" id="partners-import-btn" title="Import data from JSON">⬆ Import</button>
+          <input type="file" id="partners-import-file-input" accept=".json,application/json" style="display:none" aria-hidden="true" />
+        </div>
+        <div class="search-box">
+          <input type="text" id="partners-search-input" placeholder="Search partners…" aria-label="Search partners" />
+        </div>
+      </div>
+
+      <div class="stats-cards">
+        <div class="stat-card stat-total">
+          <div class="stat-value" id="pstat-total">0</div>
+          <div class="stat-label">Total Partners</div>
+        </div>
+        <div class="stat-card stat-perm">
+          <div class="stat-value" id="pstat-permissions">0%</div>
+          <div class="stat-label">With Permissions</div>
+        </div>
+        <div class="stat-card stat-applied">
+          <div class="stat-value" id="pstat-applied">0%</div>
+          <div class="stat-label">AI Applied</div>
+        </div>
+        <div class="stat-card stat-benefits">
+          <div class="stat-value" id="pstat-benefits">0%</div>
+          <div class="stat-label">AI Benefits</div>
+        </div>
+      </div>
+
+      <div class="table-container">
+        <table id="partners-table" aria-label="Partner AI adoption coverage">
+          <thead>
+            <tr>
+              <th rowspan="2" class="col-client">Partner <span class="col-hint">(color = classification)</span></th>
+              <th colspan="5" class="col-group-header">AI Permissions</th>
+              <th colspan="4" class="col-group-header col-group-applied">AI Applied</th>
+              <th colspan="3" class="col-group-header col-group-benefits">AI Benefits</th>
+              <th colspan="2" class="col-group-header col-group-width">Width</th>
+              <th rowspan="2" class="col-progress">Progress</th>
+              <th rowspan="2" class="col-actions"></th>
+            </tr>
+            <tr>
+              <th class="col-perm sub-header" title="Can use work-related questions">Work Questions</th>
+              <th class="col-perm sub-header" title="Can use for specs">Specs</th>
+              <th class="col-perm sub-header" title="Can use for code">Code</th>
+              <th class="col-perm sub-header" title="Can use for agentic access">Agentic</th>
+              <th class="col-perm sub-header" title="Can use with secrets">Secrets</th>
+              <th class="col-perm sub-header" title="Generative AI applied">Generative</th>
+              <th class="col-perm sub-header" title="Reactive agentic AI applied">Reactive Agentic</th>
+              <th class="col-perm sub-header" title="Proactive agentic AI applied">Proactive Agentic</th>
+              <th class="col-perm sub-header" title="Dark factory AI applied">Dark Factory</th>
+              <th class="col-perm sub-header" title="AI benefits at task level">Task</th>
+              <th class="col-perm sub-header" title="AI benefits at individual level">Individual</th>
+              <th class="col-perm sub-header" title="AI benefits at project level">Project</th>
+              <th class="col-perm sub-header" title="Point solutions width">Point Solutions</th>
+              <th class="col-perm sub-header" title="Systemic width">Systemic</th>
+            </tr>
+          </thead>
+          <tbody id="partners-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
     <!-- ── Summary Tab ── -->
     <div class="tab-content" id="tab-summary">
       <div class="summary-card">
@@ -154,6 +226,19 @@
       <div class="modal-actions">
         <button class="btn-secondary" id="modal-cancel">Cancel</button>
         <button class="btn-primary" id="modal-confirm">Add Client</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Add Partner Modal ── -->
+  <div class="modal-overlay" id="partner-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="partner-modal-title">
+    <div class="modal">
+      <h2 id="partner-modal-title">Add New Partner</h2>
+      <label for="new-partner-name" class="sr-only">Partner name</label>
+      <input type="text" id="new-partner-name" placeholder="Partner name" autocomplete="off" />
+      <div class="modal-actions">
+        <button class="btn-secondary" id="partner-modal-cancel">Cancel</button>
+        <button class="btn-primary" id="partner-modal-confirm">Add Partner</button>
       </div>
     </div>
   </div>
