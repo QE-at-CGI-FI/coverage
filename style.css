@@ -223,9 +223,9 @@ thead th.sub-header {
   white-space: normal;
   overflow-wrap: break-word;
   word-wrap: break-word;
-  word-break: break-all;
-  width: 3rem;
-  max-width: 3rem;
+  word-break: normal;
+  width: 4.5rem;
+  max-width: 4.5rem;
   line-height: 1.3;
 }
 tbody tr { border-bottom: 1px solid var(--cgi-border); transition: background .1s; }
