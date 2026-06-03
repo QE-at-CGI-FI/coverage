@@ -217,7 +217,7 @@ thead th.col-group-header.col-group-width {
 thead th.sub-header {
   background: var(--cgi-navy-mid);
   font-weight: 600;
-  font-size: .65rem;
+  font-size: .40rem;
   text-align: center;
   padding: .55rem .6rem;
 }
