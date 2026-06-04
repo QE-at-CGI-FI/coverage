@@ -19,6 +19,14 @@ const AI_APPLIED_SUBS = [
   { key: 'darkFactory',      label: 'Dark Factory' },
 ];
 
+const PARTNER_AI_APPLIED_SUBS = [
+  { key: 'generative',        label: 'Generative' },
+  { key: 'promptingAgentic',  label: 'Prompting Agentic' },
+  { key: 'reactiveAgentic',   label: 'Reactive Agentic' },
+  { key: 'proactiveAgentic',  label: 'Proactive Agentic' },
+  { key: 'darkFactory',       label: 'Dark Factory' },
+];
+
 const AI_BENEFITS_SUBS = [
   { key: 'task',       label: 'Task' },
   { key: 'individual', label: 'Individual' },
@@ -127,10 +135,11 @@ function normaliseClient(c) {
       secrets:       Boolean(c.permissions?.secrets),
     },
     aiApplied: {
-      generative:       Boolean(c.aiApplied?.generative),
-      reactiveAgentic:  Boolean(c.aiApplied?.reactiveAgentic ?? c.aiApplied?.agentic),
-      proactiveAgentic: Boolean(c.aiApplied?.proactiveAgentic),
-      darkFactory:      Boolean(c.aiApplied?.darkFactory),
+      generative:        Boolean(c.aiApplied?.generative),
+      promptingAgentic:  Boolean(c.aiApplied?.promptingAgentic),
+      reactiveAgentic:   Boolean(c.aiApplied?.reactiveAgentic ?? c.aiApplied?.agentic),
+      proactiveAgentic:  Boolean(c.aiApplied?.proactiveAgentic),
+      darkFactory:       Boolean(c.aiApplied?.darkFactory),
     },
     aiBenefits: {
       task:       Boolean(c.aiBenefits?.task ?? (typeof c.aiBenefits === 'boolean' && c.aiBenefits)),
@@ -264,7 +273,8 @@ function buildRow(client, index, entityType = 'Client') {
              ${client.permissions[p.key] ? 'checked' : ''} />
     </td>`).join('');
 
-  const appliedCells = AI_APPLIED_SUBS.map(s => `
+  const appliedSubs = entityType === 'Partner' ? PARTNER_AI_APPLIED_SUBS : AI_APPLIED_SUBS;
+  const appliedCells = appliedSubs.map(s => `
     <td class="check-cell">
       <input type="checkbox"
              data-id="${escapeHtml(client.id)}"
@@ -410,7 +420,7 @@ function renderPartnersTable() {
       : 'No partners match your search.';
     tbody.innerHTML = `
       <tr>
-        <td colspan="16" class="empty-state">
+        <td colspan="17" class="empty-state">
           <div class="empty-icon">📋</div>
           <div>${msg}</div>
         </td>
