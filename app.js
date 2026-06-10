@@ -10,6 +10,7 @@ const PERMISSIONS = [
   { key: 'code',          label: 'Can use for code' },
   { key: 'agenticOwn',    label: 'Can use for agentic access' },
   { key: 'secrets',       label: 'Can use with secrets' },
+  { key: 'tokens',        label: 'Token allowance is sufficient' },
 ];
 
 const AI_APPLIED_SUBS = [
@@ -133,6 +134,7 @@ function normaliseClient(c) {
       code:          Boolean(c.permissions?.code ?? c.permissions?.artifacts),
       agenticOwn:    Boolean(c.permissions?.agenticOwn),
       secrets:       Boolean(c.permissions?.secrets),
+      tokens:        Boolean(c.permissions?.tokens),
     },
     aiApplied: {
       generative:        Boolean(c.aiApplied?.generative),
@@ -379,7 +381,7 @@ function renderTable() {
       : 'No clients match your search.';
     tbody.innerHTML = `
       <tr>
-        <td colspan="16" class="empty-state">
+        <td colspan="17" class="empty-state">
           <div class="empty-icon">📋</div>
           <div>${msg}</div>
         </td>
@@ -420,7 +422,7 @@ function renderPartnersTable() {
       : 'No partners match your search.';
     tbody.innerHTML = `
       <tr>
-        <td colspan="17" class="empty-state">
+        <td colspan="18" class="empty-state">
           <div class="empty-icon">📋</div>
           <div>${msg}</div>
         </td>
@@ -452,7 +454,7 @@ function renderSummary() {
     return;
   }
 
-  const TOTAL_STEPS = 13; // 5 perms + 3 applied + 3 benefits + 2 width
+  const TOTAL_STEPS = 14; // 6 perms + 3 applied + 3 benefits + 2 width
   const sorted = [...clients].sort((a, b) => a.name.localeCompare(b.name));
   container.innerHTML = sorted.map((client, i) => {
     const cnt           = permCount(client);
